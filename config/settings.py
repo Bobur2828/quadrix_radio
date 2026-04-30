@@ -19,7 +19,7 @@ ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='*', cast=Csv())
 # ======================================= FEATURE FLAGS =======================================
 
 USE_POSTGRES = config('USE_POSTGRES', default=False, cast=bool)
-ENABLE_SILK = config('ENABLE_SILK', default=True, cast=bool)
+ENABLE_SILK = config('ENABLE_SILK', default=False, cast=bool)
 LOGGING_STATUS = config('LOGGING_STATUS', default=True, cast=bool)
 
 UNFOLD = UNFOLD_CONFIG
@@ -27,6 +27,9 @@ UNFOLD = UNFOLD_CONFIG
 # ======================================= INSTALLED APPS =======================================
 
 DJANGO_APPS = [
+    # Daphne must come before django.contrib.staticfiles so its `runserver`
+    # override wins (gives us native WebSocket support out of the box).
+    'daphne',
     'django.contrib.admin',
     'django.contrib.sites',
     'django.contrib.auth',
@@ -59,10 +62,17 @@ THIRD_PARTY_APPS = [
     # Celery
     'django_celery_beat',
     'django_celery_results',
+
+    # WebSocket consumers (low-latency live mic)
+    'channels',
 ]
 
 CUSTOM_APPS = [
     'main',
+    'radio',
+    'analytics',
+    'notifications',
+    'ads',
 ]
 
 INSTALLED_APPS = THIRD_PARTY_APPS + DJANGO_APPS + CUSTOM_APPS
@@ -137,6 +147,17 @@ else:
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
             'NAME': BASE_DIR / 'db.sqlite3',
+            # WAL + busy_timeout so the streaming-thread doesn't deadlock with
+            # request handlers when both touch StationState.
+            'OPTIONS': {
+                'init_command': (
+                    'PRAGMA journal_mode=WAL;'
+                    'PRAGMA synchronous=NORMAL;'
+                    'PRAGMA busy_timeout=5000;'
+                    'PRAGMA temp_store=MEMORY;'
+                ),
+                'transaction_mode': 'IMMEDIATE',
+            },
         }
     }
 
@@ -201,3 +222,96 @@ CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
 # Lokal test uchun: True bo'lsa task'lar darhol bajariladi (worker kerak emas)
 CELERY_TASK_ALWAYS_EAGER = config('CELERY_TASK_ALWAYS_EAGER', default=False, cast=bool)
 CELERY_TASK_EAGER_PROPAGATES = True
+
+# ======================================= CACHE =======================================
+
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+        'LOCATION': _default_redis_url,
+        'KEY_PREFIX': 'qradio',
+    }
+}
+
+# ======================================= REST FRAMEWORK =======================================
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework.authentication.SessionAuthentication',
+        'rest_framework.authentication.TokenAuthentication',
+    ),
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.AllowAny',
+    ),
+    'DEFAULT_THROTTLE_CLASSES': (
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle',
+    ),
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': config('THROTTLE_ANON', default='120/min'),
+        'user': config('THROTTLE_USER', default='600/min'),
+        'session_heartbeat': config('THROTTLE_HEARTBEAT', default='60/min'),
+    },
+}
+
+# ======================================= RADIO CONFIGURATION =======================================
+
+# Audio upload limits
+RADIO_AUDIO_MAX_BYTES = config('RADIO_AUDIO_MAX_BYTES', default=500 * 1024 * 1024, cast=int)  # 500 MB
+RADIO_AUDIO_ALLOWED_EXTS = ('.mp3', '.wav', '.m4a', '.aac', '.ogg')
+RADIO_AUDIO_ALLOWED_MIME = (
+    'audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/x-wav',
+    'audio/mp4', 'audio/m4a', 'audio/aac', 'audio/ogg', 'audio/webm',
+)
+
+# Cache TTLs (seconds) for hot API endpoints
+RADIO_CACHE_TTL_CURRENT = config('RADIO_CACHE_TTL_CURRENT', default=4, cast=int)
+RADIO_CACHE_TTL_STATUS = config('RADIO_CACHE_TTL_STATUS', default=8, cast=int)
+RADIO_CACHE_TTL_PLAYLIST = config('RADIO_CACHE_TTL_PLAYLIST', default=45, cast=int)
+
+# Icecast (admin / status reading)
+ICECAST_HOST = config('ICECAST_HOST', default='127.0.0.1')
+ICECAST_PORT = config('ICECAST_PORT', default='8000')
+ICECAST_ADMIN_USER = config('ICECAST_ADMIN_USER', default='admin')
+ICECAST_ADMIN_PASSWORD = config('ICECAST_ADMIN_PASSWORD', default='hackme')
+ICECAST_PUBLIC_BASE = config('ICECAST_PUBLIC_BASE', default='http://localhost:8000')
+
+# Liquidsoap (telnet control + playlist file output)
+LIQUIDSOAP_HOST = config('LIQUIDSOAP_HOST', default='127.0.0.1')
+LIQUIDSOAP_PORT = config('LIQUIDSOAP_PORT', default='1234', cast=int)
+LIQUIDSOAP_PLAYLIST_DIR = config(
+    'LIQUIDSOAP_PLAYLIST_DIR',
+    default=str(BASE_DIR / 'media' / 'liquidsoap'),
+)
+
+# Push notifications (FCM HTTP v1)
+FCM_PROJECT_ID = config('FCM_PROJECT_ID', default='')
+FCM_SERVICE_ACCOUNT_FILE = config('FCM_SERVICE_ACCOUNT_FILE', default='')
+
+# Apple Push (APNs) — token-based
+APNS_KEY_ID = config('APNS_KEY_ID', default='')
+APNS_TEAM_ID = config('APNS_TEAM_ID', default='')
+APNS_KEY_FILE = config('APNS_KEY_FILE', default='')
+APNS_BUNDLE_ID = config('APNS_BUNDLE_ID', default='')
+APNS_USE_SANDBOX = config('APNS_USE_SANDBOX', default=True, cast=bool)
+
+# GeoIP (optional). Path to MaxMind GeoLite2-City.mmdb
+GEOIP_DATABASE = config('GEOIP_DATABASE', default='')
+
+# Listener session
+LISTENER_SESSION_TTL = config('LISTENER_SESSION_TTL', default=180, cast=int)  # seconds w/o heartbeat → ended
+LISTENER_HEARTBEAT_INTERVAL = config('LISTENER_HEARTBEAT_INTERVAL', default=30, cast=int)
+
+# Beat schedule (registered programmatically in radio.tasks.beat)
+RADIO_BEAT_ENABLED = config('RADIO_BEAT_ENABLED', default=True, cast=bool)
+
+
+# DRF api_settings caches `REST_FRAMEWORK` on first access. `custom_config.py`
+# (imported on line 5) calls drf_yasg.get_schema_view() at import time which
+# pulls DRF api_settings before this module finishes executing, so the cache
+# is built with an empty user_settings. Reload it now.
+try:
+    from rest_framework.settings import api_settings as _drf_api_settings  # noqa: E402
+    _drf_api_settings.reload()
+except Exception:  # pragma: no cover
+    pass

@@ -9,6 +9,10 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include([
         path('v1/', include('main.urls')),
+        path('radio/', include('radio.api.urls')),
+        path('analytics/', include('analytics.api.urls')),
+        path('notifications/', include('notifications.api.urls')),
+        path('ads/', include('ads.api.urls')),
         path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
         path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
     ])),

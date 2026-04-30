@@ -1,0 +1,70 @@
+<!-- Icecast 2 production config for Quadrix Radio.
+     Replace EVERY <change-me> value before going live. -->
+<icecast>
+    <location>US</location>
+    <admin>admin@example.com</admin>
+
+    <limits>
+        <clients>5000</clients>
+        <sources>4</sources>
+        <queue-size>524288</queue-size>
+        <client-timeout>30</client-timeout>
+        <header-timeout>15</header-timeout>
+        <source-timeout>10</source-timeout>
+        <burst-on-connect>1</burst-on-connect>
+        <burst-size>65535</burst-size>
+    </limits>
+
+    <authentication>
+        <!-- DJ / Liquidsoap "source" account -->
+        <source-password>change-me-source-pass</source-password>
+        <!-- Used when DJ tools push directly to /live mount -->
+        <relay-password>change-me-relay-pass</relay-password>
+        <admin-user>admin</admin-user>
+        <admin-password>change-me-admin-pass</admin-password>
+    </authentication>
+
+    <hostname>radio.example.com</hostname>
+
+    <listen-socket>
+        <port>8000</port>
+    </listen-socket>
+
+    <fileserve>1</fileserve>
+
+    <paths>
+        <basedir>/usr/share/icecast2</basedir>
+        <logdir>/var/log/icecast2</logdir>
+        <webroot>/usr/share/icecast2/web</webroot>
+        <adminroot>/usr/share/icecast2/admin</adminroot>
+        <pidfile>/var/run/icecast2/icecast.pid</pidfile>
+        <alias source="/" destination="/status.xsl"/>
+    </paths>
+
+    <logging>
+        <accesslog>access.log</accesslog>
+        <errorlog>error.log</errorlog>
+        <loglevel>3</loglevel>
+        <logsize>10000</logsize>
+    </logging>
+
+    <security>
+        <chroot>0</chroot>
+    </security>
+
+    <!-- Main on-air mount (Liquidsoap pushes here). Mobile app listens to this. -->
+    <mount type="normal">
+        <mount-name>/stream</mount-name>
+        <fallback-mount>/silence.mp3</fallback-mount>
+        <fallback-override>1</fallback-override>
+        <max-listeners>5000</max-listeners>
+        <public>0</public>
+    </mount>
+
+    <!-- Live mount: DJs push here (Liquidsoap fallbacks onto it). -->
+    <mount type="normal">
+        <mount-name>/live</mount-name>
+        <max-listeners>0</max-listeners>
+        <public>0</public>
+    </mount>
+</icecast>

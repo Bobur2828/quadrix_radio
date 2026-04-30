@@ -7,6 +7,8 @@ from django.contrib.auth.models import Group, User
 from unfold.admin import ModelAdmin
 from unfold.forms import AdminPasswordChangeForm, UserChangeForm, UserCreationForm
 
+# Apps that own their admin classes — leave their models alone here.
+APPS_WITH_OWN_ADMIN = {'radio', 'analytics', 'notifications', 'ads'}
 EXCLUDED_MODELS = {'Session', 'ContentType', 'Permission', 'Site', 'LogEntry'}
 
 
@@ -28,6 +30,8 @@ class GroupAdmin(BaseGroupAdmin, ModelAdmin):
 
 for model in apps.get_models():
     if model.__name__ in EXCLUDED_MODELS:
+        continue
+    if model._meta.app_label in APPS_WITH_OWN_ADMIN:
         continue
     try:
         admin.site.register(model, ModelAdmin)

@@ -1,0 +1,135 @@
+# Quadrix Radio production stack.
+#
+# Bring up:  docker compose up -d
+# Migrate:   docker compose exec django python manage.py migrate
+# Superuser: docker compose exec django python manage.py createsuperuser
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-quadrix}
+      POSTGRES_USER: ${DB_USER:-quadrix}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-quadrix}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-quadrix}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+
+  django:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    restart: unless-stopped
+    env_file: ../.env
+    environment:
+      USE_POSTGRES: "True"
+      DB_HOST: postgres
+      REDIS_HOST: redis
+      LIQUIDSOAP_HOST: liquidsoap
+      ICECAST_HOST: icecast
+      ICECAST_PUBLIC_BASE: http://icecast:8000
+    volumes:
+      - media:/app/media
+      - playlists:/srv/playlists
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis:    { condition: service_started }
+
+  celery-worker:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    restart: unless-stopped
+    command: ["celery", "-A", "config", "worker", "-l", "info", "--concurrency", "4"]
+    env_file: ../.env
+    environment:
+      USE_POSTGRES: "True"
+      DB_HOST: postgres
+      REDIS_HOST: redis
+      LIQUIDSOAP_HOST: liquidsoap
+      ICECAST_HOST: icecast
+      ICECAST_PUBLIC_BASE: http://icecast:8000
+    volumes:
+      - media:/app/media
+      - playlists:/srv/playlists
+    depends_on:
+      - django
+      - redis
+
+  celery-beat:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    restart: unless-stopped
+    command: ["celery", "-A", "config", "beat", "-l", "info",
+              "--scheduler", "django_celery_beat.schedulers:DatabaseScheduler"]
+    env_file: ../.env
+    environment:
+      USE_POSTGRES: "True"
+      DB_HOST: postgres
+      REDIS_HOST: redis
+    depends_on:
+      - django
+      - redis
+
+  icecast:
+    image: moul/icecast:latest
+    restart: unless-stopped
+    environment:
+      ICECAST_SOURCE_PASSWORD: ${ICECAST_SOURCE_PASSWORD:-change-me-source-pass}
+      ICECAST_RELAY_PASSWORD:  ${ICECAST_RELAY_PASSWORD:-change-me-relay-pass}
+      ICECAST_ADMIN_USERNAME:  admin
+      ICECAST_ADMIN_PASSWORD:  ${ICECAST_ADMIN_PASSWORD:-change-me-admin-pass}
+      ICECAST_HOSTNAME:        ${ICECAST_HOSTNAME:-radio.example.com}
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./icecast.xml:/etc/icecast2/icecast.xml:ro
+
+  liquidsoap:
+    image: savonet/liquidsoap:v2.2.5
+    restart: unless-stopped
+    command: ["liquidsoap", "/etc/liquidsoap/radio.liq"]
+    volumes:
+      - ./radio.liq:/etc/liquidsoap/radio.liq:ro
+      - playlists:/srv/playlists
+      - media:/app/media:ro
+    depends_on:
+      - icecast
+
+  nginx:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - media:/var/www/quadrix/media:ro
+      - static:/var/www/quadrix/static:ro
+      - certbot_etc:/etc/letsencrypt:ro
+      - certbot_www:/var/www/certbot:ro
+    depends_on:
+      - django
+      - icecast
+
+volumes:
+  pg_data:
+  redis_data:
+  media:
+  static:
+  playlists:
+  certbot_etc:
+  certbot_www:
