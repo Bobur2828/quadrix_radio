@@ -196,6 +196,108 @@ label.lbl { display: block; color: var(--muted); font-size: 11px; text-transform
 .lib-row.empty { color: var(--dim); padding: 28px; text-align: center;
                  grid-template-columns: 1fr; }
 
+/* ---------- modals ---------- */
+.modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,.7); z-index: 100;
+    display: flex; align-items: center; justify-content: center;
+    backdrop-filter: blur(4px); animation: fadeIn .15s;
+}
+@keyframes fadeIn { from { opacity: 0; } }
+.modal-card {
+    background: var(--panel); border: 1px solid var(--line-2);
+    border-radius: 14px; padding: 24px; width: 100%; max-width: 480px;
+    box-shadow: 0 20px 60px rgba(0,0,0,.6); animation: slideUp .2s;
+    max-height: 90vh; overflow: auto;
+}
+@keyframes slideUp { from { transform: translateY(20px); opacity: 0; } }
+.modal-card h3 {
+    margin: 0 0 4px; font-size: 18px; display: flex; align-items: center; gap: 10px;
+}
+.modal-card .modal-sub { color: var(--muted); font-size: 13px; margin-bottom: 18px; }
+.modal-card .field { margin-bottom: 14px; }
+.modal-card .field-row { display: grid; gap: 10px; grid-template-columns: 1fr 1fr; }
+.modal-card .actions {
+    display: flex; gap: 8px; margin-top: 20px; justify-content: flex-end;
+    border-top: 1px solid var(--line); padding-top: 16px;
+}
+.color-picker { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+.color-swatch {
+    width: 28px; height: 28px; border-radius: 50%; cursor: pointer;
+    border: 2px solid transparent; transition: transform .1s;
+}
+.color-swatch:hover { transform: scale(1.15); }
+.color-swatch.active { border-color: #fff; transform: scale(1.15); }
+
+/* ---------- weekly grid ---------- */
+:root {
+    --wg-hours-w: 64px;
+    --wg-hour-h: 36px;
+    --wg-head-h: 32px;
+}
+.week-grid {
+    display: grid;
+    grid-template-columns: var(--wg-hours-w) repeat(7, 1fr);
+    grid-auto-rows: var(--wg-hour-h);
+    background: var(--panel-2);
+    border: 1px solid var(--line-2);
+    border-radius: 10px;
+    overflow: hidden;
+    user-select: none;
+    position: relative;       /* anchors the absolutely-positioned blocks */
+}
+.week-grid .wg-head {
+    background: var(--panel); padding: 8px 6px; font-size: 11px;
+    text-align: center; color: var(--muted); font-weight: 600;
+    border-bottom: 1px solid var(--line-2);
+    height: var(--wg-head-h);
+    box-sizing: border-box;
+}
+.week-grid .wg-cell {
+    border-right: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+    cursor: pointer;
+    height: var(--wg-hour-h);
+    box-sizing: border-box;
+}
+.week-grid .wg-cell:hover { background: rgba(255,255,255,.03); }
+.week-grid .wg-hour {
+    background: var(--panel); color: var(--dim); font-size: 10px;
+    padding: 2px 6px; text-align: right;
+    border-right: 1px solid var(--line-2);
+    height: var(--wg-hour-h);
+    box-sizing: border-box;
+}
+
+/* Schedule blocks are placed with calc() so they reflow with browser zoom.
+   --d = day_of_week (0..6), --start-min, --span-min from JS. */
+.wg-block {
+    position: absolute;
+    left:  calc(var(--wg-hours-w) + var(--d) * (100% - var(--wg-hours-w)) / 7 + 2px);
+    width: calc((100% - var(--wg-hours-w)) / 7 - 4px);
+    top:    calc(var(--wg-head-h) + var(--start-min) * var(--wg-hour-h) / 60);
+    height: calc(var(--span-min) * var(--wg-hour-h) / 60 - 2px);
+    border-radius: 4px; padding: 3px 6px;
+    font-size: 11px; font-weight: 600; color: #fff;
+    overflow: hidden; cursor: pointer;
+    box-shadow: 0 1px 2px rgba(0,0,0,.3);
+    box-sizing: border-box;
+}
+.wg-block:hover { filter: brightness(1.1); }
+
+.wg-now-line {
+    position: absolute;
+    left:  calc(var(--wg-hours-w) + var(--d) * (100% - var(--wg-hours-w)) / 7);
+    width: calc((100% - var(--wg-hours-w)) / 7);
+    top:   calc(var(--wg-head-h) + var(--now-min) * var(--wg-hour-h) / 60);
+    height: 1px;
+    background: var(--danger); z-index: 5; pointer-events: none;
+}
+.wg-now-line::before {
+    content: ''; position: absolute; left: -3px; top: -3px;
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--danger);
+}
+
 /* ---------- log ---------- */
 pre.log {
     background: #060e1f; color: var(--muted); padding: 12px; border-radius: 8px;
@@ -295,7 +397,8 @@ pre.log {
 <!-- RIGHT COLUMN — schedule / library -->
 <main class="panel" style="margin-top:0">
     <div class="tabs">
-        <button class="tab-btn active" data-tab="schedule">📅 Schedule</button>
+        <button class="tab-btn active" data-tab="schedule">📅 Playlist</button>
+        <button class="tab-btn" data-tab="shows">📡 Shows</button>
         <button class="tab-btn" data-tab="library">🎵 Library</button>
         <button class="tab-btn" data-tab="upload">⬆ Upload</button>
     </div>
@@ -326,6 +429,29 @@ pre.log {
                 Reorder ↑↓ or drag — auto-saved
             </span>
         </div>
+    </div>
+
+    <!-- ─── SHOWS tab — weekly grid + show CRUD ─── -->
+    <div class="tab-body" id="tab-shows" style="display:none">
+        <div id="now-airing" style="margin-bottom:14px;padding:12px;background:var(--panel-2);
+             border:1px solid var(--line-2);border-radius:10px;display:none">
+            <div class="lbl">Currently airing</div>
+            <div id="now-airing-body" style="font-size:15px"></div>
+        </div>
+
+        <div class="row" style="margin-bottom:8px;justify-content:space-between">
+            <span class="lbl" style="margin:0">Weekly schedule</span>
+            <span style="color:var(--dim);font-size:11px">click empty cell to schedule a slot</span>
+        </div>
+        <div id="week-grid" class="week-grid">
+            <div class="lib-row empty">Loading…</div>
+        </div>
+
+        <div class="row" style="margin-top:18px;margin-bottom:8px;justify-content:space-between">
+            <span class="lbl" style="margin:0">All shows on this station</span>
+            <button id="create-show" class="tiny">+ New show</button>
+        </div>
+        <div id="show-list" class="track-list"></div>
     </div>
 
     <!-- ─── LIBRARY tab ─── -->
@@ -391,6 +517,7 @@ pre.log {
 </div>
 
 <div id="toast"></div>
+<div id="modal-root"></div>
 
 <!-- ───────── JS ───────── -->
 <script>
@@ -495,6 +622,7 @@ $$('.tab-btn').forEach(btn => btn.addEventListener('click', () => {
     $('tab-' + state.activeTab).style.display = 'block';
     if (state.activeTab === 'library') loadLibrary();
     if (state.activeTab === 'schedule' && !state.playlist) loadPlaylistForDate();
+    if (state.activeTab === 'shows') loadShowsTab();
 }));
 
 // ════════════════════════════════════════════════════════════════════════
@@ -997,6 +1125,631 @@ $('do-upload').addEventListener('click', async () => {
         $('do-upload').disabled = false;
     }
 });
+
+// ════════════════════════════════════════════════════════════════════════
+// MODAL HELPER
+// ════════════════════════════════════════════════════════════════════════
+
+function openModal(html) {
+    const root = $('modal-root');
+    root.innerHTML = `<div class="modal-overlay" id="modal-overlay">
+        <div class="modal-card" id="modal-card">${html}</div>
+    </div>`;
+    const overlay = $('modal-overlay');
+    const card = $('modal-card');
+    const close = () => { root.innerHTML = ''; };
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+    document.addEventListener('keydown', function esc(e) {
+        if (e.key === 'Escape') { close(); document.removeEventListener('keydown', esc); }
+    });
+    return { card, close };
+}
+
+const SHOW_COLORS = [
+    '#10b981', '#3b82f6', '#ec4899', '#f59e0b', '#ef4444',
+    '#8b5cf6', '#06b6d4', '#84cc16', '#f97316', '#64748b',
+];
+
+function colorPickerHTML(selected = '#10b981') {
+    return SHOW_COLORS.map(c =>
+        `<div class="color-swatch ${c === selected ? 'active' : ''}"
+              data-color="${c}" style="background:${c}"></div>`
+    ).join('');
+}
+
+function bindColorPicker(rootEl, hiddenInputId) {
+    rootEl.querySelectorAll('.color-swatch').forEach(sw => {
+        sw.addEventListener('click', () => {
+            rootEl.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
+            sw.classList.add('active');
+            $(hiddenInputId).value = sw.dataset.color;
+        });
+    });
+}
+
+// ════════════════════════════════════════════════════════════════════════
+// SHOWS / SCHEDULE
+// ════════════════════════════════════════════════════════════════════════
+
+const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+async function loadShowsTab() {
+    if (!state.currentStation) return;
+    // Sequential: state.scheduleList is set by loadWeekGrid and READ by loadShowsList,
+    // so order matters.
+    await loadCurrentShow();
+    await loadWeekGrid();
+    await loadShowsList();
+    try {
+        state.allPlaylists = await api(
+            `/api/radio/dj/playlists/?station=${state.currentStation.slug}`
+        );
+    } catch (_) { state.allPlaylists = []; }
+}
+
+async function loadShowsList() {
+    const shows = await api(`/api/radio/dj/shows/?station=${state.currentStation.slug}`);
+    state.showsList = shows;
+
+    // Schedules-by-show for richer display
+    const schedules = state.scheduleList || [];
+    const schedByShow = {};
+    schedules.forEach(s => {
+        (schedByShow[s.show_id] = schedByShow[s.show_id] || []).push(s);
+    });
+
+    const root = $('show-list');
+    root.innerHTML = '';
+    if (shows.length === 0) {
+        root.innerHTML = `<div class="lib-row empty">No shows yet. Click "+ New show" to add one.</div>`;
+        return;
+    }
+    shows.forEach(s => {
+        const slots = schedByShow[s.id] || [];
+        const slotText = slots.length === 0
+            ? '<span style="color:var(--dim)">not scheduled</span>'
+            : slots.map(sl => `${DAY_LABELS[sl.day_of_week]} ${sl.start_time}–${sl.end_time}`).join(' · ');
+
+        const row = document.createElement('div');
+        row.className = 'track-row';
+        row.style.cursor = 'pointer';
+        row.innerHTML = `
+            <div class="idx" style="width:14px;height:14px;border-radius:3px;background:${s.color}"></div>
+            <div>
+                <div class="track-title">${escape(s.name)}</div>
+                <div class="track-meta" style="margin-top:2px">
+                    ${s.host_name ? '👤 ' + escape(s.host_name) + ' · ' : ''}
+                    🎵 ${escape(s.playlist_title || 'default playlist')}
+                    ${s.is_active ? '' : ' · <span style="color:var(--warn)">disabled</span>'}
+                </div>
+                <div class="track-meta" style="margin-top:2px;font-size:11px">⏰ ${slotText}</div>
+            </div>
+            <div></div>
+            <div class="actions" onclick="event.stopPropagation()">
+                <button class="tiny ghost" data-act="edit">✏ Edit</button>
+                <button class="tiny danger" data-act="del">✕</button>
+            </div>
+        `;
+        row.querySelector('[data-act="edit"]').addEventListener('click', () => openShowModal(s));
+        row.querySelector('[data-act="del"]').addEventListener('click', async () => {
+            if (!confirm(`Delete "${s.name}"? All its schedules will be removed.`)) return;
+            try {
+                await api(`/api/radio/dj/shows/${s.id}/`, { method: 'DELETE' });
+                toast('Show deleted', 'success');
+                loadShowsTab();
+            } catch (e) { toast('Delete failed: ' + e.message, 'error'); }
+        });
+        // click row → edit
+        row.addEventListener('click', () => openShowModal(s));
+        root.appendChild(row);
+    });
+}
+
+async function loadCurrentShow() {
+    const r = await api(`/api/radio/dj/schedule/current/?station=${state.currentStation.slug}`);
+    const box = $('now-airing');
+    const body = $('now-airing-body');
+    if (r.now) {
+        const s = r.now;
+        box.style.display = 'block';
+        body.innerHTML = `<span style="display:inline-block;width:10px;height:10px;background:${s.show_color};
+            border-radius:50%;margin-right:8px"></span>
+            <strong>${escape(s.show_name)}</strong>
+            <span style="color:var(--muted)"> · ${s.day_label} ${s.start_time}–${s.end_time}</span>`;
+    } else {
+        box.style.display = 'block';
+        body.innerHTML = '<span style="color:var(--muted)">No show on air. Default playlist.</span>';
+    }
+    return r;
+}
+
+async function loadWeekGrid() {
+    const schedules = await api(`/api/radio/dj/schedules/?station=${state.currentStation.slug}`);
+    state.scheduleList = schedules;
+    renderWeekGrid(schedules);
+}
+
+function renderWeekGrid(schedules) {
+    const grid = $('week-grid');
+    grid.innerHTML = '';
+
+    // Header row: empty + 7 day labels
+    const corner = document.createElement('div');
+    corner.className = 'wg-head';
+    grid.appendChild(corner);
+    DAY_LABELS.forEach(d => {
+        const h = document.createElement('div');
+        h.className = 'wg-head';
+        h.textContent = d;
+        grid.appendChild(h);
+    });
+
+    // 24 hour rows × 8 columns (hour label + 7 days)
+    for (let h = 0; h < 24; h++) {
+        const lbl = document.createElement('div');
+        lbl.className = 'wg-hour';
+        lbl.textContent = String(h).padStart(2, '0') + ':00';
+        grid.appendChild(lbl);
+
+        for (let d = 0; d < 7; d++) {
+            const cell = document.createElement('div');
+            cell.className = 'wg-cell';
+            cell.dataset.day = d;
+            cell.dataset.hour = h;
+            cell.addEventListener('click', () => addScheduleAt(d, h));
+            grid.appendChild(cell);
+        }
+    }
+
+    // Overlay schedule blocks — positioned via CSS calc() with per-block
+    // custom properties, so they always track container width (zoom-proof).
+    schedules.forEach(s => {
+        if (!s.is_active) return;
+        const [sh, sm] = s.start_time.split(':').map(Number);
+        const [eh, em] = s.end_time.split(':').map(Number);
+        const startMin = sh * 60 + sm;
+        let endMin = eh * 60 + em;
+        if (endMin <= startMin) endMin = 24 * 60;
+        const span = endMin - startMin;
+
+        const block = document.createElement('div');
+        block.className = 'wg-block';
+        block.style.background = s.show_color;
+        block.style.setProperty('--d', s.day_of_week);
+        block.style.setProperty('--start-min', startMin);
+        block.style.setProperty('--span-min', span);
+        block.title = `${s.show_name} (${s.start_time}–${s.end_time})`;
+        block.textContent = s.show_name;
+        block.addEventListener('click', (e) => {
+            e.stopPropagation();
+            openScheduleModal({ existing: s });
+        });
+        grid.appendChild(block);
+    });
+
+    // Red "now" indicator line on the current day column
+    const now = new Date();
+    const nowDay = (now.getDay() + 6) % 7;            // JS Sun=0; we want Mon=0
+    const nowMin = now.getHours() * 60 + now.getMinutes();
+    const line = document.createElement('div');
+    line.className = 'wg-now-line';
+    line.style.setProperty('--d', nowDay);
+    line.style.setProperty('--now-min', nowMin);
+    grid.appendChild(line);
+}
+
+// ────── Show editor modal (create/edit) ──────
+function openShowModal(existing = null) {
+    const isEdit = !!existing;
+    const playlists = state.allPlaylists || [];
+    const playlistOptions = ['<option value="">— default daily playlist —</option>']
+        .concat(playlists.map(p =>
+            `<option value="${p.id}" ${existing && existing.playlist_id === p.id ? 'selected' : ''}>
+                ${escape(p.title)} (${p.date}, ${p.item_count} tracks)
+            </option>`
+        )).join('');
+
+    const { card, close } = openModal(`
+        <h3>${isEdit ? '✏️ Edit show' : '✨ New show'}</h3>
+        <div class="modal-sub">${isEdit ? existing.name : 'Add a recurring program (e.g. "Morning Drive")'}</div>
+
+        <div class="field">
+            <label class="lbl">Name</label>
+            <input id="m-show-name" type="text" placeholder="e.g. Morning Drive"
+                   value="${isEdit ? escape(existing.name) : ''}">
+        </div>
+        <div class="field">
+            <label class="lbl">Description</label>
+            <input id="m-show-desc" type="text" placeholder="(optional)"
+                   value="${isEdit ? escape(existing.description || '') : ''}">
+        </div>
+        <div class="field">
+            <label class="lbl">Color</label>
+            <div class="color-picker" id="m-show-color-picker">
+                ${colorPickerHTML(existing ? existing.color : '#10b981')}
+            </div>
+            <input type="hidden" id="m-show-color" value="${existing ? existing.color : '#10b981'}">
+        </div>
+        <div class="field">
+            <label class="lbl">Auto-DJ playlist (plays when no DJ live)</label>
+            <select id="m-show-playlist">${playlistOptions}</select>
+        </div>
+        <div class="field">
+            <label style="display:flex;gap:8px;align-items:center;cursor:pointer;color:var(--muted)">
+                <input type="checkbox" id="m-show-active"
+                       ${!isEdit || existing.is_active ? 'checked' : ''}>
+                <span>Active (uncheck to disable without deleting)</span>
+            </label>
+        </div>
+
+        <div class="actions">
+            ${isEdit ? '<button class="muted" id="m-show-cancel" style="margin-right:auto">Cancel</button>' : ''}
+            <button class="ghost" id="m-show-cancel${isEdit ? '2' : ''}">Cancel</button>
+            <button id="m-show-save">${isEdit ? 'Save changes' : 'Create show'}</button>
+        </div>
+    `);
+
+    bindColorPicker(card, 'm-show-color');
+    card.querySelectorAll('[id^="m-show-cancel"]').forEach(b =>
+        b.addEventListener('click', close));
+
+    card.querySelector('#m-show-save').addEventListener('click', async () => {
+        const name = card.querySelector('#m-show-name').value.trim();
+        if (!name) return toast('Name required', 'error');
+        const body = {
+            name,
+            description: card.querySelector('#m-show-desc').value,
+            color: card.querySelector('#m-show-color').value,
+            is_active: card.querySelector('#m-show-active').checked,
+        };
+        const playlistId = card.querySelector('#m-show-playlist').value;
+        body.playlist_id = playlistId ? parseInt(playlistId, 10) : null;
+
+        try {
+            if (isEdit) {
+                await api(`/api/radio/dj/shows/${existing.id}/`, {
+                    method: 'PATCH', body,
+                });
+                toast('Show updated', 'success');
+            } else {
+                await api('/api/radio/dj/shows/', {
+                    method: 'POST',
+                    body: { ...body, station: state.currentStation.slug, host_self: true },
+                });
+                toast('Show created', 'success');
+            }
+            close();
+            loadShowsTab();
+        } catch (e) { toast('Failed: ' + e.message, 'error'); }
+    });
+}
+
+// ────── Schedule slot modal (create/edit) ──────
+function openScheduleModal({ existing = null, defaultDay = 0, defaultHour = 0 } = {}) {
+    const isEdit = !!existing;
+    const day = isEdit ? existing.day_of_week : defaultDay;
+    const startTime = isEdit ? existing.start_time : `${String(defaultHour).padStart(2,'0')}:00`;
+    const endTime = isEdit ? existing.end_time : `${String((defaultHour + 1) % 24).padStart(2,'0')}:00`;
+    const showId = isEdit ? existing.show_id : (state.showsList[0]?.id || null);
+
+    const dayOptions = DAY_LABELS.map((d, i) =>
+        `<option value="${i}" ${i === day ? 'selected' : ''}>${d}</option>`
+    ).join('');
+
+    let showOptions;
+    if (state.showsList.length === 0) {
+        showOptions = '<option value="">— Create a show first —</option>';
+    } else {
+        showOptions = state.showsList.map(s =>
+            `<option value="${s.id}" ${s.id === showId ? 'selected' : ''}>${escape(s.name)}</option>`
+        ).join('');
+    }
+
+    const { card, close } = openModal(`
+        <h3>${isEdit ? '✏️ Edit slot' : '⏰ Schedule a show'}</h3>
+        <div class="modal-sub">${isEdit
+            ? existing.show_name + ' · ' + DAY_LABELS[existing.day_of_week]
+            : 'Pick a show and a weekly time slot'}</div>
+
+        <div class="field">
+            <label class="lbl">Show</label>
+            <select id="m-sch-show" ${isEdit ? 'disabled' : ''}>${showOptions}</select>
+            ${state.showsList.length === 0
+                ? '<button class="tiny ghost" id="m-sch-create-show" style="margin-top:6px">+ Create show first</button>'
+                : ''}
+        </div>
+        <div class="field">
+            <label class="lbl">Day of week</label>
+            <select id="m-sch-day">${dayOptions}</select>
+        </div>
+        <div class="field-row">
+            <div class="field">
+                <label class="lbl">Start time</label>
+                <input id="m-sch-start" type="time" value="${startTime}" required>
+            </div>
+            <div class="field">
+                <label class="lbl">End time</label>
+                <input id="m-sch-end" type="time" value="${endTime}" required>
+            </div>
+        </div>
+        <div class="field" style="font-size:12px;color:var(--dim)">
+            Tip: end time after midnight (e.g. 22:00 → 02:00) is supported.
+        </div>
+
+        <div class="actions">
+            ${isEdit
+                ? '<button class="danger" id="m-sch-delete" style="margin-right:auto">Delete slot</button>'
+                : ''}
+            <button class="ghost" id="m-sch-cancel">Cancel</button>
+            <button id="m-sch-save" ${state.showsList.length === 0 ? 'disabled' : ''}>
+                ${isEdit ? 'Save' : 'Schedule'}
+            </button>
+        </div>
+    `);
+
+    card.querySelector('#m-sch-cancel').addEventListener('click', close);
+    const createBtn = card.querySelector('#m-sch-create-show');
+    if (createBtn) {
+        createBtn.addEventListener('click', () => { close(); openShowModal(); });
+    }
+    const delBtn = card.querySelector('#m-sch-delete');
+    if (delBtn) {
+        delBtn.addEventListener('click', async () => {
+            if (!confirm('Delete this slot?')) return;
+            try {
+                await api(`/api/radio/dj/schedules/${existing.id}/`, { method: 'DELETE' });
+                toast('Slot removed', 'success');
+                close(); loadShowsTab();
+            } catch (e) { toast('Delete failed: ' + e.message, 'error'); }
+        });
+    }
+
+    card.querySelector('#m-sch-save').addEventListener('click', async () => {
+        const showId = card.querySelector('#m-sch-show').value;
+        const dayOfWeek = parseInt(card.querySelector('#m-sch-day').value, 10);
+        const start = card.querySelector('#m-sch-start').value;
+        const end = card.querySelector('#m-sch-end').value;
+        if (!showId || !start || !end) return toast('All fields required', 'error');
+
+        try {
+            if (isEdit) {
+                await api(`/api/radio/dj/schedules/${existing.id}/`, {
+                    method: 'PATCH',
+                    body: { day_of_week: dayOfWeek, start_time: start, end_time: end },
+                });
+                toast('Slot updated', 'success');
+            } else {
+                await api('/api/radio/dj/schedules/', {
+                    method: 'POST',
+                    body: {
+                        show_id: parseInt(showId, 10),
+                        day_of_week: dayOfWeek,
+                        start_time: start,
+                        end_time: end,
+                    },
+                });
+                toast('Slot scheduled', 'success');
+            }
+            close(); loadShowsTab();
+        } catch (e) { toast('Failed: ' + e.message, 'error'); }
+    });
+}
+
+function addScheduleAt(day, hour) {
+    openScheduleModal({ defaultDay: day, defaultHour: hour });
+}
+
+// ────── One-shot wizard modal: show + playlist + schedule in one go ──────
+async function openShowWizard() {
+    if (!state.currentStation) return toast('Pick a station', 'error');
+
+    // Load library tracks (lots of them) for the picker
+    let lib;
+    try {
+        lib = await api('/api/radio/dj/library/?limit=500&ordering=title');
+    } catch (e) { return toast('Library load failed: ' + e.message, 'error'); }
+    const tracks = lib.results;
+
+    const today = new Date();
+    const day = (today.getDay() + 6) % 7;  // JS Sun=0; we want Mon=0
+    const defaultStart = String(today.getHours()).padStart(2, '0') + ':00';
+
+    const dayOpts = DAY_LABELS.map((d, i) =>
+        `<option value="${i}" ${i === day ? 'selected' : ''}>${d}</option>`
+    ).join('');
+
+    const trackList = tracks.map(t => `
+        <label class="m-wiz-row" data-search="${escape((t.title + ' ' + t.artist).toLowerCase())}"
+               style="display:flex;align-items:center;gap:8px;padding:6px 8px;
+                      cursor:pointer;font-size:13px;border-radius:5px">
+            <input type="checkbox" data-id="${t.id}" data-dur="${t.duration_seconds}"
+                   data-title="${escape(t.title)}">
+            <span style="flex:1">${escape(t.title)}</span>
+            <span style="color:var(--dim);font-size:11px">${escape(t.artist || '')}</span>
+            <span style="color:var(--muted);font-size:12px;min-width:40px;text-align:right">
+                ${t.duration_display || '0:00'}
+            </span>
+        </label>
+    `).join('');
+
+    const { card, close } = openModal(`
+        <h3>✨ New show</h3>
+        <div class="modal-sub">Show + playlist + schedule — bitta yerda yarating</div>
+
+        <div class="field">
+            <label class="lbl">Show name</label>
+            <input id="m-wiz-name" type="text" placeholder="e.g. Tongi efir" autofocus>
+        </div>
+        <div class="field">
+            <label class="lbl">Color</label>
+            <div class="color-picker" id="m-wiz-color-picker">${colorPickerHTML('#10b981')}</div>
+            <input type="hidden" id="m-wiz-color" value="#10b981">
+        </div>
+
+        <div class="field" style="border-top:1px solid var(--line);padding-top:14px">
+            <label class="lbl">When does it air? (ixtiyoriy)</label>
+        </div>
+        <div class="field-row">
+            <div>
+                <label class="lbl" style="font-size:10px">Day</label>
+                <select id="m-wiz-day">${dayOpts}</select>
+            </div>
+            <div>
+                <label class="lbl" style="font-size:10px">Start</label>
+                <input id="m-wiz-start" type="time" value="${defaultStart}">
+            </div>
+        </div>
+        <div class="field" style="font-size:12px;color:var(--muted);margin-top:-6px">
+            <label style="display:flex;gap:6px;align-items:center;cursor:pointer">
+                <input type="checkbox" id="m-wiz-auto-end" checked>
+                Auto end-time from tracks
+            </label>
+            <div id="m-wiz-end-row" style="display:none;margin-top:6px">
+                <input id="m-wiz-end" type="time" value="04:00" style="max-width:140px">
+            </div>
+        </div>
+        <div class="field" id="m-wiz-end-display" style="font-size:13px;
+             background:var(--panel-2);border:1px solid var(--line-2);
+             border-radius:8px;padding:8px 12px">
+            ⏱ <strong id="m-wiz-end-text">add tracks to compute end time</strong>
+        </div>
+
+        <div class="field" style="border-top:1px solid var(--line);padding-top:14px">
+            <label class="lbl">Tracks (click to add)</label>
+            <input id="m-wiz-search" type="search" placeholder="Search title or artist…"
+                   style="margin-bottom:6px">
+            <div id="m-wiz-tracks" style="max-height:240px;overflow:auto;
+                background:var(--panel-2);border:1px solid var(--line-2);
+                border-radius:8px;padding:4px">
+                ${tracks.length === 0
+                    ? '<div style="padding:20px;text-align:center;color:var(--dim)">No tracks. Upload some first.</div>'
+                    : trackList}
+            </div>
+            <div id="m-wiz-summary" style="margin-top:8px;color:var(--muted);
+                 font-size:12px;display:flex;justify-content:space-between">
+                <span>0 tracks selected</span>
+                <span>0:00 total</span>
+            </div>
+        </div>
+
+        <div class="actions">
+            <button class="ghost" id="m-wiz-cancel">Cancel</button>
+            <button id="m-wiz-create">Create show</button>
+        </div>
+    `);
+
+    bindColorPicker(card, 'm-wiz-color');
+
+    // Search filter
+    card.querySelector('#m-wiz-search').addEventListener('input', (e) => {
+        const q = e.target.value.toLowerCase();
+        card.querySelectorAll('.m-wiz-row').forEach(row => {
+            row.style.display = !q || row.dataset.search.includes(q) ? '' : 'none';
+        });
+    });
+
+    // Track ordering — preserve click order
+    const selectedOrder = [];
+
+    function fmtTime(sec) {
+        const m = Math.floor(sec / 60), s = Math.floor(sec % 60);
+        return `${m}:${String(s).padStart(2, '0')}`;
+    }
+    function addMinutesToHHMM(hhmm, minutes) {
+        const [h, m] = hhmm.split(':').map(Number);
+        let total = h * 60 + m + Math.ceil(minutes);
+        total = ((total % (24 * 60)) + 24 * 60) % (24 * 60);
+        return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
+    }
+
+    function updateSummary() {
+        const checked = Array.from(card.querySelectorAll('input[data-id]:checked'));
+        let totalSec = 0;
+        checked.forEach(cb => totalSec += parseInt(cb.dataset.dur, 10) || 0);
+
+        card.querySelector('#m-wiz-summary').innerHTML =
+            `<span><strong>${checked.length}</strong> tracks selected</span>` +
+            `<span>${fmtTime(totalSec)} total</span>`;
+
+        // Compute end time
+        const start = card.querySelector('#m-wiz-start').value || '00:00';
+        const auto = card.querySelector('#m-wiz-auto-end').checked;
+        let endStr;
+        if (totalSec > 0) {
+            const computed = addMinutesToHHMM(start, totalSec / 60);
+            endStr = computed;
+            if (auto) card.querySelector('#m-wiz-end').value = computed;
+        }
+
+        const display = card.querySelector('#m-wiz-end-text');
+        if (totalSec === 0) {
+            display.textContent = 'add tracks to compute end time';
+        } else if (auto) {
+            display.innerHTML = `<strong>${start} → ${endStr}</strong>` +
+                ` <span style="color:var(--muted)">(${checked.length} tracks · ${fmtTime(totalSec)})</span>`;
+        } else {
+            const manualEnd = card.querySelector('#m-wiz-end').value;
+            display.innerHTML = `<strong>${start} → ${manualEnd}</strong>` +
+                ` <span style="color:var(--muted)">(tracks fill ${fmtTime(totalSec)}, then loop)</span>`;
+        }
+    }
+
+    card.addEventListener('change', (e) => {
+        if (e.target.matches('input[type=checkbox][data-id]')) {
+            const id = parseInt(e.target.dataset.id, 10);
+            if (e.target.checked) {
+                if (!selectedOrder.includes(id)) selectedOrder.push(id);
+            } else {
+                const i = selectedOrder.indexOf(id);
+                if (i >= 0) selectedOrder.splice(i, 1);
+            }
+            updateSummary();
+        }
+    });
+
+    const autoEndCb = card.querySelector('#m-wiz-auto-end');
+    autoEndCb.addEventListener('change', () => {
+        card.querySelector('#m-wiz-end-row').style.display =
+            autoEndCb.checked ? 'none' : 'block';
+        updateSummary();
+    });
+    card.querySelector('#m-wiz-start').addEventListener('change', updateSummary);
+    card.querySelector('#m-wiz-end')?.addEventListener('change', updateSummary);
+
+    card.querySelector('#m-wiz-cancel').addEventListener('click', close);
+
+    card.querySelector('#m-wiz-create').addEventListener('click', async () => {
+        const name = card.querySelector('#m-wiz-name').value.trim();
+        if (!name) return toast('Show name required', 'error');
+
+        const body = {
+            station: state.currentStation.slug,
+            name,
+            color: card.querySelector('#m-wiz-color').value,
+            track_ids: selectedOrder,
+        };
+        const day = card.querySelector('#m-wiz-day').value;
+        const start = card.querySelector('#m-wiz-start').value;
+        if (day !== '' && start) {
+            body.day_of_week = parseInt(day, 10);
+            body.start_time = start;
+            const auto = card.querySelector('#m-wiz-auto-end').checked;
+            if (!auto) body.end_time = card.querySelector('#m-wiz-end').value;
+        }
+
+        try {
+            const r = await api('/api/radio/dj/shows/wizard/', { method: 'POST', body });
+            close();
+            const parts = ['Show created'];
+            if (r.playlist) parts.push(`${r.playlist.item_count} tracks`);
+            if (r.schedule) parts.push(`scheduled ${DAY_LABELS[r.schedule.day_of_week]} ${r.schedule.start_time}–${r.schedule.end_time}`);
+            toast('✓ ' + parts.join(' · '), 'success');
+            loadShowsTab();
+        } catch (e) { toast('Failed: ' + e.message, 'error'); }
+    });
+}
+
+$('create-show').addEventListener('click', () => openShowWizard());
 
 // ────── escaping helper ──────
 function escape(s) {

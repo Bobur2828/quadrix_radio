@@ -25,8 +25,21 @@ def select_playlist(
     region_id: Optional[int] = None,
     segment_id: Optional[int] = None,
     statuses: tuple = (PlaylistStatus.ACTIVE, PlaylistStatus.SCHEDULED),
+    honor_schedule: bool = True,
 ) -> Optional[Playlist]:
-    """Return the most-specific playlist matching the scope, or fallback."""
+    """Return the most-specific playlist matching the scope, or fallback.
+
+    If `honor_schedule` is True (default) and a show is currently airing on
+    this station, that show's playlist takes precedence over the daily one.
+    Pass False to bypass the scheduler (used by the scheduler itself when it
+    needs to know the underlying default playlist).
+    """
+    if honor_schedule:
+        from radio.services import scheduler as scheduler_service
+        show_playlist = scheduler_service.select_show_playlist(station)
+        if show_playlist is not None:
+            return show_playlist
+
     day = day or timezone.localdate()
 
     base_qs = Playlist.objects.filter(

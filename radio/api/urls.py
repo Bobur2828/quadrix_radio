@@ -6,6 +6,10 @@ from radio.api.dj_playlists import (
     NowStateView, PlaylistDetailView, PlaylistItemAddView,
     PlaylistItemDetailView, PlaylistListView, PlaylistReorderView,
 )
+from radio.api.dj_schedule import (
+    CurrentShowView, ScheduleDetailView, ScheduleListView,
+    ShowDetailView, ShowListView, ShowWizardView,
+)
 from radio.api.dj_views import (
     DJDashboardInfoView, DJLiveStartView, DJLiveStatusView, DJLiveStopView,
     DJLiveUploadView, DJQueuePushView, DJSkipView,
@@ -56,4 +60,12 @@ urlpatterns = [
          PlaylistReorderView.as_view(), name='dj-playlist-reorder'),
     path('dj/playlist-items/<int:pk>/',
          PlaylistItemDetailView.as_view(), name='dj-playlist-item-detail'),
+
+    # ----- Show scheduler -----
+    path('dj/shows/wizard/', ShowWizardView.as_view(), name='dj-show-wizard'),
+    path('dj/shows/', ShowListView.as_view(), name='dj-shows'),
+    path('dj/shows/<int:pk>/', ShowDetailView.as_view(), name='dj-show-detail'),
+    path('dj/schedules/', ScheduleListView.as_view(), name='dj-schedules'),
+    path('dj/schedules/<int:pk>/', ScheduleDetailView.as_view(), name='dj-schedule-detail'),
+    path('dj/schedule/current/', CurrentShowView.as_view(), name='dj-schedule-current'),
 ]

@@ -4,6 +4,7 @@ from radio.tasks.playlist import (
     activate_daily_playlists, ensure_tomorrow_placeholder,
     sync_playlist_to_liquidsoap,
 )
+from radio.tasks.scheduler import apply_current_show
 
 __all__ = (
     'activate_daily_playlists',
@@ -12,4 +13,5 @@ __all__ = (
     'update_current_track',
     'cleanup_stale_state',
     'check_radio_health',
+    'apply_current_show',
 )

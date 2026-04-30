@@ -2,6 +2,7 @@ from radio.admin.station import RadioStationAdmin
 from radio.admin.track import AudioTrackAdmin
 from radio.admin.playlist import PlaylistAdmin
 from radio.admin.live import LiveBroadcastAdmin
+from radio.admin.show import ShowAdmin, ShowScheduleAdmin, ShowEpisodeAdmin
 from radio.admin.state import StationStateAdmin
 
 __all__ = (
@@ -9,5 +10,6 @@ __all__ = (
     'AudioTrackAdmin',
     'PlaylistAdmin',
     'LiveBroadcastAdmin',
+    'ShowAdmin', 'ShowScheduleAdmin', 'ShowEpisodeAdmin',
     'StationStateAdmin',
 )

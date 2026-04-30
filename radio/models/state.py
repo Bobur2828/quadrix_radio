@@ -42,6 +42,14 @@ class StationState(models.Model):
         related_name='+',
     )
 
+    # Currently-active show episode (set by the scheduler task).
+    current_show_episode = models.ForeignKey(
+        'radio.ShowEpisode',
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='+',
+    )
+
     listeners = models.PositiveIntegerField(default=0)
     online = models.BooleanField(default=False)
     last_sync_at = models.DateTimeField(null=True, blank=True)

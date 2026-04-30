@@ -20,6 +20,8 @@ _SCHEDULE = [
      {'interval': 60, 'unit': 'seconds'}),
     ('radio.check_radio_health', 'radio.tasks.health.check_radio_health',
      {'interval': 60, 'unit': 'seconds'}),
+    ('radio.apply_current_show', 'radio.tasks.scheduler.apply_current_show',
+     {'interval': 60, 'unit': 'seconds'}),
     ('radio.cleanup_stale_state', 'radio.tasks.current.cleanup_stale_state',
      {'interval': 30, 'unit': 'minutes'}),
     ('radio.activate_daily_playlists', 'radio.tasks.playlist.activate_daily_playlists',
