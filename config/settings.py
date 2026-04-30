@@ -161,6 +161,31 @@ else:
         }
     }
 
+# ======================================= HTTPS / PROXY =======================================
+
+# When Nginx terminates TLS and proxies to gunicorn over HTTP, Django needs
+# this header to know the original request was HTTPS (so redirects, cookies,
+# and `request.is_secure()` work).
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+USE_X_FORWARDED_HOST = True
+
+# CSRF must trust the public origin Django sees behind the proxy.
+CSRF_TRUSTED_ORIGINS = config(
+    'CSRF_TRUSTED_ORIGINS',
+    default='',
+    cast=Csv(),
+)
+
+# Production HTTPS hardening — turned on automatically when DEBUG=False.
+if not DEBUG:
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_HSTS_SECONDS = config('SECURE_HSTS_SECONDS', default=0, cast=int)
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = False
+    SECURE_REFERRER_POLICY = 'same-origin'
+    X_FRAME_OPTIONS = 'DENY'
+
 # ======================================= AUTHENTICATION =======================================
 
 AUTH_PASSWORD_VALIDATORS = [

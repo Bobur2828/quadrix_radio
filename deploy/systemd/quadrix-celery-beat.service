@@ -1,0 +1,22 @@
+[Unit]
+Description=Quadrix Radio — Celery beat (periodic tasks)
+After=network.target redis-server.service quadrix-celery.service
+Requires=redis-server.service
+
+[Service]
+Type=simple
+User=root
+Group=root
+WorkingDirectory=/var/www/quadrix_radio
+EnvironmentFile=/var/www/quadrix_radio/.env
+
+ExecStart=/var/www/quadrix_radio/venv/bin/celery -A config beat \
+    -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+
+Restart=always
+RestartSec=5
+StandardOutput=append:/var/log/quadrix-celery-beat.log
+StandardError=append:/var/log/quadrix-celery-beat.log
+
+[Install]
+WantedBy=multi-user.target

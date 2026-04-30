@@ -1,0 +1,22 @@
+[Unit]
+Description=Quadrix Radio — Celery worker
+After=network.target redis-server.service
+Requires=redis-server.service
+
+[Service]
+Type=simple
+User=root
+Group=root
+WorkingDirectory=/var/www/quadrix_radio
+EnvironmentFile=/var/www/quadrix_radio/.env
+
+ExecStart=/var/www/quadrix_radio/venv/bin/celery -A config worker \
+    -l info --concurrency 4
+
+Restart=always
+RestartSec=5
+StandardOutput=append:/var/log/quadrix-celery.log
+StandardError=append:/var/log/quadrix-celery.log
+
+[Install]
+WantedBy=multi-user.target

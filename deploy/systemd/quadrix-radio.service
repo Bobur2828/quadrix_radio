@@ -1,0 +1,38 @@
+[Unit]
+Description=Quadrix Radio (Django + Channels via gunicorn/uvicorn)
+After=network.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+WorkingDirectory=/var/www/quadrix_radio
+EnvironmentFile=/var/www/quadrix_radio/.env
+
+# IMPORTANT: --workers 1 is REQUIRED.
+# The radio broadcaster keeps in-process Python threads (one per station).
+# Multiple workers → each worker has its own broadcaster threads → listeners
+# would hear different audio depending on which worker accepted them.
+# For >50 concurrent listeners switch to Icecast (deploy/icecast.xml).
+ExecStart=/var/www/quadrix_radio/venv/bin/gunicorn \
+    config.asgi:application \
+    --worker-class uvicorn.workers.UvicornWorker \
+    --workers 1 \
+    --bind 127.0.0.1:8001 \
+    --timeout 120 \
+    --keep-alive 30 \
+    --access-logfile - \
+    --error-logfile - \
+    --log-level info
+
+Restart=always
+RestartSec=5
+StandardOutput=append:/var/log/quadrix-radio.log
+StandardError=append:/var/log/quadrix-radio.log
+
+# Security hardening (basic)
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

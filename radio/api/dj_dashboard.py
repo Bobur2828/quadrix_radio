@@ -513,6 +513,19 @@ function pickMime() {
 
 async function goLive() {
     if (!state.currentStation) { toast('Pick a station', 'error'); return; }
+
+    // navigator.mediaDevices is only exposed on secure contexts (HTTPS or
+    // localhost). HTTP-on-public-IP gets undefined here — give a clear hint.
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        const msg = location.protocol === 'https:'
+            ? 'Mic API not available in this browser.'
+            : 'Mic requires HTTPS. Use https://, localhost, or enable Chrome flag '
+              + '"unsafely-treat-insecure-origin-as-secure" for ' + location.origin;
+        toast(msg, 'error');
+        log('✗ ' + msg);
+        return;
+    }
+
     const mime = pickMime();
     if (!mime) { toast('Browser unsupported', 'error'); return; }
 
