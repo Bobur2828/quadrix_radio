@@ -1,0 +1,87 @@
+# ============================== Python ==============================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.whl
+.installed.cfg
+*.manifest
+*.spec
+pip-log.txt
+pip-delete-this-directory.txt
+
+# ============================== Virtual Environments ==============================
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# ============================== Django ==============================
+*.log
+*.pot
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+media/
+staticfiles/
+debug.log
+
+# ============================== Migrations (loyihaga qarab) ==============================
+# Agar migrationlar git'da saqlanmasa, kommentni oching:
+# */migrations/*.py
+# !*/migrations/__init__.py
+
+# ============================== Testing / Coverage ==============================
+htmlcov/
+.tox/
+.coverage
+.coverage.*
+.cache
+.pytest_cache/
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+
+# ============================== Silk ==============================
+silk_media/
+
+# ============================== IDEs ==============================
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# ============================== OS ==============================
+.DS_Store
+Thumbs.db
+
+# ============================== Jupyter ==============================
+.ipynb_checkpoints/
+
+# ============================== Type Checkers ==============================
+.mypy_cache/
+.pyre/
+.pytype/
+
+# ============================== Backups ==============================
+*.bak
